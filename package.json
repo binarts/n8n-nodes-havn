@@ -1,0 +1,52 @@
+{
+  "name": "@binartscom/n8n-nodes-havn",
+  "version": "0.1.0",
+  "description": "Use HAVN real-estate workspace tools in n8n workflows.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/binarts/n8n-nodes-havn.git"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "havn",
+    "real-estate",
+    "mcp"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "n8n-node build",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "test": "vitest run"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/HavnMcpApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Havn/Havn.node.js"
+    ]
+  },
+  "devDependencies": {
+	"@eslint/js": "^9.39.0",
+	"@n8n/eslint-plugin-community-nodes": "^0.9.0",
+    "@n8n/node-cli": "^0.23.0",
+    "n8n-workflow": "^1.0.0",
+    "typescript": "^5.8.3",
+	"typescript-eslint": "^8.35.0",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "n8n-workflow": ">=1.0.0"
+  }
+}
