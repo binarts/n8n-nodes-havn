@@ -65,5 +65,10 @@ describe('HAVN n8n tool catalog', () => {
 				expect.objectContaining({ name: 'binary_property_name', required: true }),
 			]),
 		);
+		for (const tool of ['add_attachment', 'add_property_photos', 'add_contact_photo']) {
+			expect(TOOL_PARAMETERS[tool].fields).toContainEqual(
+				expect.objectContaining({ name: 'source', required: true }),
+			);
+		}
 	});
 });

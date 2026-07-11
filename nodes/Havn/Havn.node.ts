@@ -162,9 +162,14 @@ export class Havn implements INodeType {
 				let data: unknown;
 				if (toolName === 'add_attachment' && toolArguments.source === 'binary') {
 					data = await uploadAttachmentBinary(this, items, itemIndex, endpoint, apiKey, toolArguments);
+				} else if (toolName === 'add_property_photos' && toolArguments.source === 'binary') {
+					data = await uploadPropertyPhotosBinary(this, items, itemIndex, endpoint, apiKey, toolArguments);
+				} else if (toolName === 'add_contact_photo' && toolArguments.source === 'binary') {
+					data = await uploadContactPhotoBinary(this, items, itemIndex, endpoint, apiKey, toolArguments);
 				} else {
 					delete toolArguments.source;
 					delete toolArguments.binary_property_name;
+					delete toolArguments.binary_photos;
 					const sessionId = await initializeMcpSession(this, endpoint, apiKey);
 					const result = await callMcpTool(this, endpoint, apiKey, sessionId, toolName, toolArguments);
 					data = parseToolContent(result);
@@ -267,6 +272,85 @@ async function uploadAttachmentBinary(
 	});
 }
 
+async function uploadPropertyPhotosBinary(
+	context: IExecuteFunctions,
+	items: INodeExecutionData[],
+	itemIndex: number,
+	endpoint: string,
+	apiKey: string,
+	toolArguments: Record<string, unknown>,
+): Promise<unknown> {
+	const rows = (toolArguments.binary_photos as { photo?: Array<{ alt_text?: string; binary_property_name?: string }> })?.photo ?? [];
+	if (rows.length === 0) {
+		throw new NodeOperationError(context.getNode(), 'Add at least one incoming binary photo.', { itemIndex });
+	}
+	const uploaded: unknown[] = [];
+	for (let index = 0; index < rows.length; index += 1) {
+		const row = rows[index];
+		const binaryPropertyName = String(row.binary_property_name ?? 'data').trim() || 'data';
+		const { binary, bytes } = await incomingBinary(context, items, itemIndex, binaryPropertyName);
+		uploaded.push(await context.helpers.httpRequest({
+			method: 'POST',
+			url: new URL('/uploads/property-photos', endpoint).toString(),
+			headers: {
+				authorization: `Bearer ${apiKey}`,
+				'content-type': binary.mimeType || 'application/octet-stream',
+				'x-havn-alt-text': encodeURIComponent(String(row.alt_text ?? '')),
+				'x-havn-file-name': encodeURIComponent(binary.fileName || `property-photo-${index + 1}`),
+				'x-havn-is-hero': String(Boolean(toolArguments.is_hero_first && index === 0)),
+				'x-havn-property-id': String(toolArguments.property_id),
+			},
+			body: bytes,
+			json: true,
+		}));
+	}
+	return { count: uploaded.length, photos: uploaded.flat() };
+}
+
+async function uploadContactPhotoBinary(
+	context: IExecuteFunctions,
+	items: INodeExecutionData[],
+	itemIndex: number,
+	endpoint: string,
+	apiKey: string,
+	toolArguments: Record<string, unknown>,
+): Promise<unknown> {
+	const binaryPropertyName = String(toolArguments.binary_property_name ?? 'data').trim() || 'data';
+	const { binary, bytes } = await incomingBinary(context, items, itemIndex, binaryPropertyName);
+	return await context.helpers.httpRequest({
+		method: 'POST',
+		url: new URL('/uploads/contact-photos', endpoint).toString(),
+		headers: {
+			authorization: `Bearer ${apiKey}`,
+			'content-type': binary.mimeType || 'application/octet-stream',
+			'x-havn-contact-id': String(toolArguments.contact_id),
+			'x-havn-file-name': encodeURIComponent(binary.fileName || 'contact-photo'),
+		},
+		body: bytes,
+		json: true,
+	});
+}
+
+async function incomingBinary(
+	context: IExecuteFunctions,
+	items: INodeExecutionData[],
+	itemIndex: number,
+	binaryPropertyName: string,
+) {
+	const binary = items[itemIndex]?.binary?.[binaryPropertyName];
+	if (!binary) {
+		throw new NodeOperationError(
+			context.getNode(),
+			`No incoming binary file was found in property "${binaryPropertyName}". Add a file-producing node before HAVN or choose Public URL.`,
+			{ itemIndex },
+		);
+	}
+	return {
+		binary,
+		bytes: await context.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName),
+	};
+}
+
 function addArgumentValue(
 	result: Record<string, unknown>,
 	name: string,
@@ -278,6 +362,10 @@ function addArgumentValue(
 		result.image_urls = rows.map((row) => String(row.image_url ?? '').trim()).filter(Boolean);
 		const altTexts = rows.map((row) => String(row.alt_text ?? '').trim());
 		if (altTexts.some(Boolean)) result.alt_texts = altTexts;
+		return;
+	}
+	if (kind === 'binaryPhotos') {
+		result.binary_photos = value;
 		return;
 	}
 	if (name.startsWith('ai_summary_')) {

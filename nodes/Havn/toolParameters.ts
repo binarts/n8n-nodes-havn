@@ -1,6 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-type FieldKind = 'boolean' | 'dateTime' | 'number' | 'photos' | 'string' | 'stringList';
+type FieldKind = 'binaryPhotos' | 'boolean' | 'dateTime' | 'number' | 'photos' | 'string' | 'stringList';
 
 type ToolField = {
 	description?: string;
@@ -103,7 +103,9 @@ export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
 	] },
 	add_property_photos: { fields: [
 		{ name: 'property_id', required: true, description: 'HAVN property UUID.' },
-		{ name: 'photos', required: true, kind: 'photos', description: 'Public image URLs and optional alt text.' },
+		{ name: 'source', required: true, options: ['binary', 'public_url'], description: 'Upload incoming n8n binary images or import public URLs.' },
+		{ name: 'binary_photos', required: true, kind: 'binaryPhotos', showWhen: { field: 'source', value: 'binary' }, description: 'Incoming binary image properties and optional alt text.' },
+		{ name: 'photos', required: true, kind: 'photos', showWhen: { field: 'source', value: 'public_url' }, description: 'Public image URLs and optional alt text.' },
 		{ name: 'is_hero_first', kind: 'boolean', description: 'Use the first imported photo as the hero image.' },
 	] },
 	add_attachment: { fields: [
@@ -152,7 +154,9 @@ export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
 	] },
 	add_contact_photo: { fields: [
 		{ name: 'contact_id', required: true },
-		{ name: 'image_url', required: true, description: 'Public URL of the contact photo.' },
+		{ name: 'source', required: true, options: ['binary', 'public_url'], description: 'Upload incoming n8n binary data or import a public URL.' },
+		{ name: 'binary_property_name', required: true, showWhen: { field: 'source', value: 'binary' }, description: 'Name of the incoming binary property. Usually data.' },
+		{ name: 'image_url', required: true, showWhen: { field: 'source', value: 'public_url' }, description: 'Public URL of the contact photo.' },
 	] },
 	add_contact_note: { fields: [
 		{ name: 'contact_id', required: true }, { name: 'note', required: true },
@@ -240,6 +244,38 @@ function propertyForField(tool: string, field: ToolField): INodeProperties {
 							default: '',
 							required: true,
 							description: 'A publicly accessible direct image URL.',
+						},
+						{
+							displayName: 'Alt Text',
+							name: 'alt_text',
+							type: 'string',
+							default: '',
+							description: 'A short accessible description of this photo.',
+						},
+					],
+				},
+			],
+		};
+	}
+	if (field.kind === 'binaryPhotos') {
+		return {
+			...base,
+			type: 'fixedCollection',
+			typeOptions: { multipleValues: true },
+			placeholder: 'Add Binary Photo',
+			default: { photo: [{ binary_property_name: 'data', alt_text: '' }] },
+			options: [
+				{
+					name: 'photo',
+					displayName: 'Binary Photo',
+					values: [
+						{
+							displayName: 'Binary Property Name',
+							name: 'binary_property_name',
+							type: 'string',
+							default: 'data',
+							required: true,
+							description: 'Name of an incoming binary property containing an image.',
 						},
 						{
 							displayName: 'Alt Text',
