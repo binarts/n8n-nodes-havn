@@ -207,14 +207,14 @@ function collectToolArguments(
 	for (const field of definition.fields.filter((candidate) => candidate.required)) {
 		const value = context.getNodeParameter(parameterName(tool, field.name), itemIndex);
 		if (value !== '') {
-			addArgumentValue(result, field.name, value, fieldKind(tool, field.name), context, itemIndex);
+			addArgumentValue(result, field.name, value, fieldKind(tool, field.name));
 		}
 	}
 
 	if (definition.fields.some((field) => !field.required)) {
 		const additional = context.getNodeParameter(additionalFieldsName(tool), itemIndex, {}) as Record<string, unknown>;
 		for (const [name, value] of Object.entries(additional)) {
-			addArgumentValue(result, name, value, fieldKind(tool, name), context, itemIndex);
+			addArgumentValue(result, name, value, fieldKind(tool, name));
 		}
 	}
 	return result;
@@ -225,8 +225,6 @@ function addArgumentValue(
 	name: string,
 	value: unknown,
 	kind: string,
-	context: IExecuteFunctions,
-	itemIndex: number,
 ): void {
 	if (kind === 'photos') {
 		const rows = (value as { photo?: Array<{ alt_text?: string; image_url?: string }> }).photo ?? [];
@@ -235,26 +233,21 @@ function addArgumentValue(
 		if (altTexts.some(Boolean)) result.alt_texts = altTexts;
 		return;
 	}
-	result[name] = normalizeArgumentValue(value, kind, context, itemIndex, name);
+	if (name.startsWith('ai_summary_')) {
+		const key = name.slice('ai_summary_'.length);
+		const aiSummary = (result.ai_summary_json ?? {}) as Record<string, unknown>;
+		aiSummary[key] = normalizeArgumentValue(value, kind);
+		result.ai_summary_json = aiSummary;
+		return;
+	}
+	result[name] = normalizeArgumentValue(value, kind);
 }
 
-function normalizeArgumentValue(
-	value: unknown,
-	kind: string,
-	context: IExecuteFunctions,
-	itemIndex: number,
-	fieldName: string,
-): unknown {
-	if (kind !== 'json' || typeof value !== 'string') return value;
-	try {
-		return JSON.parse(value);
-	} catch (error) {
-		throw new NodeOperationError(
-			context.getNode(),
-			`Invalid JSON in ${fieldName}: ${errorMessage(error)}`,
-			{ itemIndex },
-		);
+function normalizeArgumentValue(value: unknown, kind: string): unknown {
+	if (kind === 'stringList' && typeof value === 'string') {
+		return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 	}
+	return value;
 }
 
 function parseArguments(value: unknown, context: IExecuteFunctions, itemIndex: number): Record<string, unknown> {

@@ -56,5 +56,8 @@ describe('HAVN n8n tool catalog', () => {
 		expect(TOOL_PARAMETERS.add_property_photos.fields).toContainEqual(
 			expect.objectContaining({ name: 'photos', kind: 'photos', required: true }),
 		);
+		expect(Object.values(TOOL_PARAMETERS).flatMap(({ fields }) => fields)).not.toContainEqual(
+			expect.objectContaining({ kind: 'json' }),
+		);
 	});
 });

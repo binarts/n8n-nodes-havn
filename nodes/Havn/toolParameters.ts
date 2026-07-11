@@ -1,6 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-type FieldKind = 'boolean' | 'dateTime' | 'json' | 'number' | 'photos' | 'string';
+type FieldKind = 'boolean' | 'dateTime' | 'number' | 'photos' | 'string' | 'stringList';
 
 type ToolField = {
 	description?: string;
@@ -55,6 +55,18 @@ const contactFields: ToolField[] = [
 	{ name: 'full_name', required: true }, { name: 'email' }, { name: 'first_name' },
 	{ name: 'last_name' }, { name: 'notes' }, { name: 'phone' },
 	{ name: 'preferred_contact_channel', options: ['sms', 'email', 'phone'] },
+];
+
+const sellerAiFields: ToolField[] = [
+	{ name: 'ai_summary_summary', description: 'AI-assisted overall summary.' },
+	{ name: 'ai_summary_lead_quality', description: 'Summary of lead quality.' },
+	{ name: 'ai_summary_open_house_activity', description: 'Summary of open house activity.' },
+	{ name: 'ai_summary_pricing_notes', description: 'Pricing observations.' },
+	{ name: 'ai_summary_buyer_feedback', kind: 'stringList', description: 'One buyer feedback item per line.' },
+	{ name: 'ai_summary_highlights', kind: 'stringList', description: 'One highlight per line.' },
+	{ name: 'ai_summary_next_steps', kind: 'stringList', description: 'One next step per line.' },
+	{ name: 'ai_summary_questions', kind: 'stringList', description: 'One question per line.' },
+	{ name: 'ai_summary_risks', kind: 'stringList', description: 'One risk per line.' },
 ];
 
 export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
@@ -161,19 +173,22 @@ export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
 	] },
 	draft_seller_report_summary: { fields: [
 		{ name: 'property_id', required: true }, { name: 'summary', required: true },
-		{ name: 'ai_summary_json', kind: 'json', description: 'Structured seller report summary as JSON.' },
-		{ name: 'next_steps' }, { name: 'open_house_id' }, { name: 'seller_feedback' },
+		{ name: 'next_steps' }, { name: 'open_house_id' }, { name: 'seller_feedback' }, ...sellerAiFields,
 	] },
 	update_seller_report_summary: { fields: [
 		{ name: 'report_id', required: true },
-		{ name: 'ai_summary_json', kind: 'json', description: 'Structured seller report summary as JSON.' },
 		{ name: 'next_steps' }, { name: 'seller_feedback' },
-		{ name: 'status', options: ['draft', 'sent', 'archived', 'ready', 'accepted'] }, { name: 'summary' },
+		{ name: 'status', options: ['draft', 'sent', 'archived', 'ready', 'accepted'] },
+		{ name: 'summary' }, ...sellerAiFields,
 	] },
 };
 
 function label(name: string): string {
-	return name.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+	return name
+		.replace(/^ai_summary_/, 'ai_')
+		.split('_')
+		.map((part) => ({ ai: 'AI', id: 'ID', url: 'URL' })[part] ?? part.charAt(0).toUpperCase() + part.slice(1))
+		.join(' ');
 }
 
 function propertyForField(tool: string, field: ToolField): INodeProperties {
@@ -195,7 +210,9 @@ function propertyForField(tool: string, field: ToolField): INodeProperties {
 	if (field.kind === 'boolean') return { ...base, type: 'boolean', default: false };
 	if (field.kind === 'number') return { ...base, type: 'number', default: 0 };
 	if (field.kind === 'dateTime') return { ...base, type: 'dateTime', default: '' };
-	if (field.kind === 'json') return { ...base, type: 'json', default: field.required ? '[]' : '{}' };
+	if (field.kind === 'stringList') {
+		return { ...base, type: 'string', typeOptions: { rows: 4 }, default: '' };
+	}
 	if (field.kind === 'photos') {
 		return {
 			...base,
