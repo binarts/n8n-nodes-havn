@@ -1,7 +1,11 @@
 {
   "name": "@binartscom/n8n-nodes-havn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Use HAVN real-estate workspace tools in n8n workflows.",
+  "author": {
+    "name": "Lubomir Havran",
+    "email": "lubomir.havran@gmail.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
