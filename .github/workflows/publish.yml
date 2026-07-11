@@ -22,6 +22,3 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm publish --provenance
-        env:
-          # Required only for the first release, before npm Trusted Publishing is configured.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
