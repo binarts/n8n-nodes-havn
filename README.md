@@ -11,28 +11,10 @@ The node connects to `https://mcp.havnre.app/mcp` by default. The key is stored 
 ## Using the node
 
 1. Select a HAVN tool.
-2. Enter its parameters as a JSON object in **Arguments (JSON)**.
+2. Fill in the named required inputs and choose optional inputs under **Additional Fields**.
 3. The node outputs the tool result as standard n8n JSON.
 
-For example, select `search_contacts` and use:
-
-```json
-{
-  "query": "agent@example.com",
-  "limit": 20
-}
-```
-
-To create an inquiry:
-
-```json
-{
-  "property_id": "property-uuid",
-  "contact_id": "contact-uuid",
-  "temperature": "warm",
-  "notes": "Requested a viewing next week"
-}
-```
+For example, `get_property_media` displays **Property ID** as a required input and **Limit** as an optional input. The **Custom MCP tool** option keeps a raw JSON field for newly released tools that are not yet included in the package.
 
 ## Development
 

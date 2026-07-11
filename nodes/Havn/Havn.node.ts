@@ -7,6 +7,14 @@ import {
 	type INodeTypeDescription,
 } from 'n8n-workflow';
 
+import {
+	additionalFieldsName,
+	buildToolParameterProperties,
+	fieldKind,
+	parameterName,
+	TOOL_PARAMETERS,
+} from './toolParameters.js';
+
 type HavnMcpResponse = {
 	body?: unknown;
 	headers?: Record<string, string | string[] | undefined>;
@@ -111,8 +119,14 @@ export class Havn implements INodeType {
 				name: 'argumentsJson',
 				type: 'json',
 				default: '{}',
-				description: 'Tool arguments as a JSON object. Required fields depend on the selected HAVN tool.',
+				displayOptions: {
+					show: {
+						tool: ['custom'],
+					},
+				},
+				description: 'Arguments for the custom MCP tool as a JSON object.',
 			},
+			...buildToolParameterProperties(),
 		],
 	};
 
@@ -137,8 +151,14 @@ export class Havn implements INodeType {
 					throw new NodeOperationError(this.getNode(), 'A HAVN MCP tool name is required.', { itemIndex });
 				}
 
-				const rawArguments = this.getNodeParameter('argumentsJson', itemIndex);
-				const toolArguments = parseArguments(rawArguments, this, itemIndex);
+				const legacyArguments = parseArguments(
+					this.getNodeParameter('argumentsJson', itemIndex, '{}'),
+					this,
+					itemIndex,
+				);
+				const toolArguments = selectedTool === 'custom'
+					? legacyArguments
+					: { ...legacyArguments, ...collectToolArguments(this, selectedTool, itemIndex) };
 				const sessionId = await initializeMcpSession(this, endpoint, apiKey);
 				const result = await callMcpTool(this, endpoint, apiKey, sessionId, toolName, toolArguments);
 
@@ -172,6 +192,50 @@ function normalizeEndpoint(value: string, context: IExecuteFunctions): string {
 		return url.toString();
 	} catch {
 		throw new NodeOperationError(context.getNode(), 'The HAVN MCP endpoint must be an HTTPS URL ending in /mcp.');
+	}
+}
+
+function collectToolArguments(
+	context: IExecuteFunctions,
+	tool: string,
+	itemIndex: number,
+): Record<string, unknown> {
+	const definition = TOOL_PARAMETERS[tool];
+	if (!definition) return {};
+
+	const result: Record<string, unknown> = {};
+	for (const field of definition.fields.filter((candidate) => candidate.required)) {
+		const value = context.getNodeParameter(parameterName(tool, field.name), itemIndex);
+		if (value !== '') {
+			result[field.name] = normalizeArgumentValue(value, fieldKind(tool, field.name), context, itemIndex, field.name);
+		}
+	}
+
+	if (definition.fields.some((field) => !field.required)) {
+		const additional = context.getNodeParameter(additionalFieldsName(tool), itemIndex, {}) as Record<string, unknown>;
+		for (const [name, value] of Object.entries(additional)) {
+			result[name] = normalizeArgumentValue(value, fieldKind(tool, name), context, itemIndex, name);
+		}
+	}
+	return result;
+}
+
+function normalizeArgumentValue(
+	value: unknown,
+	kind: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+	fieldName: string,
+): unknown {
+	if (kind !== 'json' || typeof value !== 'string') return value;
+	try {
+		return JSON.parse(value);
+	} catch (error) {
+		throw new NodeOperationError(
+			context.getNode(),
+			`Invalid JSON in ${fieldName}: ${errorMessage(error)}`,
+			{ itemIndex },
+		);
 	}
 }
 

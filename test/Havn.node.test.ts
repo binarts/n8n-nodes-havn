@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { HAVN_MCP_TOOLS } from '../nodes/Havn/Havn.node.js';
+import { TOOL_PARAMETERS } from '../nodes/Havn/toolParameters.js';
 
 const EXPECTED_TOOL_NAMES = [
 	'workspace_summary',
@@ -42,5 +43,15 @@ describe('HAVN n8n tool catalog', () => {
 
 		expect(names).toEqual(EXPECTED_TOOL_NAMES);
 		expect(new Set(names)).toHaveLength(names.length);
+	});
+
+	it('defines visible input parameters for every tool', () => {
+		expect(Object.keys(TOOL_PARAMETERS)).toEqual(EXPECTED_TOOL_NAMES);
+		expect(TOOL_PARAMETERS.get_property_media.fields).toContainEqual(
+			expect.objectContaining({ name: 'property_id', required: true }),
+		);
+		expect(TOOL_PARAMETERS.create_contact.fields).toContainEqual(
+			expect.objectContaining({ name: 'full_name', required: true }),
+		);
 	});
 });
