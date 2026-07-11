@@ -8,6 +8,7 @@ type ToolField = {
 	name: string;
 	options?: string[];
 	required?: boolean;
+	showWhen?: { field: string; value: string };
 };
 
 export type ToolParameterDefinition = {
@@ -106,7 +107,9 @@ export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
 		{ name: 'is_hero_first', kind: 'boolean', description: 'Use the first imported photo as the hero image.' },
 	] },
 	add_attachment: { fields: [
-		{ name: 'file_url', required: true, description: 'Public URL of the document to import.' },
+		{ name: 'source', required: true, options: ['binary', 'public_url'], description: 'Upload incoming n8n binary data or import a public URL.' },
+		{ name: 'binary_property_name', required: true, showWhen: { field: 'source', value: 'binary' }, description: 'Name of the incoming binary property. Usually data.' },
+		{ name: 'file_url', required: true, showWhen: { field: 'source', value: 'public_url' }, description: 'Public HTTP or HTTPS URL of the document to import.' },
 		{ name: 'file_name' }, { name: 'property_id' }, { name: 'task_id' },
 	] },
 	create_open_house: { fields: [
@@ -196,7 +199,12 @@ function propertyForField(tool: string, field: ToolField): INodeProperties {
 		displayName: label(field.name),
 		name: parameterName(tool, field.name),
 		description: field.description ?? label(field.name),
-		displayOptions: { show: { tool: [tool] } },
+		displayOptions: {
+			show: {
+				tool: [tool],
+				...(field.showWhen ? { [parameterName(tool, field.showWhen.field)]: [field.showWhen.value] } : {}),
+			},
+		},
 		required: field.required ?? false,
 	};
 	if (field.options) {
@@ -245,7 +253,7 @@ function propertyForField(tool: string, field: ToolField): INodeProperties {
 			],
 		};
 	}
-	return { ...base, type: 'string', default: '' };
+	return { ...base, type: 'string', default: field.name === 'binary_property_name' ? 'data' : '' };
 }
 
 export function buildToolParameterProperties(): INodeProperties[] {

@@ -159,12 +159,20 @@ export class Havn implements INodeType {
 				const toolArguments = selectedTool === 'custom'
 					? legacyArguments
 					: { ...legacyArguments, ...collectToolArguments(this, selectedTool, itemIndex) };
-				const sessionId = await initializeMcpSession(this, endpoint, apiKey);
-				const result = await callMcpTool(this, endpoint, apiKey, sessionId, toolName, toolArguments);
+				let data: unknown;
+				if (toolName === 'add_attachment' && toolArguments.source === 'binary') {
+					data = await uploadAttachmentBinary(this, items, itemIndex, endpoint, apiKey, toolArguments);
+				} else {
+					delete toolArguments.source;
+					delete toolArguments.binary_property_name;
+					const sessionId = await initializeMcpSession(this, endpoint, apiKey);
+					const result = await callMcpTool(this, endpoint, apiKey, sessionId, toolName, toolArguments);
+					data = parseToolContent(result);
+				}
 
 				output.push({
 					json: {
-						data: parseToolContent(result) as INodeExecutionData['json'][string],
+						data: data as INodeExecutionData['json'][string],
 						tool: toolName,
 					},
 					pairedItem: { item: itemIndex },
@@ -205,6 +213,10 @@ function collectToolArguments(
 
 	const result: Record<string, unknown> = {};
 	for (const field of definition.fields.filter((candidate) => candidate.required)) {
+		if (field.showWhen) {
+			const dependency = context.getNodeParameter(parameterName(tool, field.showWhen.field), itemIndex);
+			if (dependency !== field.showWhen.value) continue;
+		}
 		const value = context.getNodeParameter(parameterName(tool, field.name), itemIndex);
 		if (value !== '') {
 			addArgumentValue(result, field.name, value, fieldKind(tool, field.name));
@@ -218,6 +230,41 @@ function collectToolArguments(
 		}
 	}
 	return result;
+}
+
+async function uploadAttachmentBinary(
+	context: IExecuteFunctions,
+	items: INodeExecutionData[],
+	itemIndex: number,
+	endpoint: string,
+	apiKey: string,
+	toolArguments: Record<string, unknown>,
+): Promise<unknown> {
+	const binaryPropertyName = String(toolArguments.binary_property_name ?? 'data').trim() || 'data';
+	const binary = items[itemIndex]?.binary?.[binaryPropertyName];
+	if (!binary) {
+		throw new NodeOperationError(
+			context.getNode(),
+			`No incoming binary file was found in property "${binaryPropertyName}". Add a file-producing node before HAVN or choose Public URL.`,
+			{ itemIndex },
+		);
+	}
+	const bytes = await context.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName);
+	const headers: Record<string, string> = {
+		authorization: `Bearer ${apiKey}`,
+		'content-type': binary.mimeType || 'application/octet-stream',
+		'x-havn-file-name': encodeURIComponent(String(toolArguments.file_name || binary.fileName || 'attachment')),
+	};
+	if (toolArguments.property_id) headers['x-havn-property-id'] = String(toolArguments.property_id);
+	if (toolArguments.task_id) headers['x-havn-task-id'] = String(toolArguments.task_id);
+
+	return await context.helpers.httpRequest({
+		method: 'POST',
+		url: new URL('/uploads/attachments', endpoint).toString(),
+		headers,
+		body: bytes,
+		json: true,
+	});
 }
 
 function addArgumentValue(
