@@ -207,17 +207,35 @@ function collectToolArguments(
 	for (const field of definition.fields.filter((candidate) => candidate.required)) {
 		const value = context.getNodeParameter(parameterName(tool, field.name), itemIndex);
 		if (value !== '') {
-			result[field.name] = normalizeArgumentValue(value, fieldKind(tool, field.name), context, itemIndex, field.name);
+			addArgumentValue(result, field.name, value, fieldKind(tool, field.name), context, itemIndex);
 		}
 	}
 
 	if (definition.fields.some((field) => !field.required)) {
 		const additional = context.getNodeParameter(additionalFieldsName(tool), itemIndex, {}) as Record<string, unknown>;
 		for (const [name, value] of Object.entries(additional)) {
-			result[name] = normalizeArgumentValue(value, fieldKind(tool, name), context, itemIndex, name);
+			addArgumentValue(result, name, value, fieldKind(tool, name), context, itemIndex);
 		}
 	}
 	return result;
+}
+
+function addArgumentValue(
+	result: Record<string, unknown>,
+	name: string,
+	value: unknown,
+	kind: string,
+	context: IExecuteFunctions,
+	itemIndex: number,
+): void {
+	if (kind === 'photos') {
+		const rows = (value as { photo?: Array<{ alt_text?: string; image_url?: string }> }).photo ?? [];
+		result.image_urls = rows.map((row) => String(row.image_url ?? '').trim()).filter(Boolean);
+		const altTexts = rows.map((row) => String(row.alt_text ?? '').trim());
+		if (altTexts.some(Boolean)) result.alt_texts = altTexts;
+		return;
+	}
+	result[name] = normalizeArgumentValue(value, kind, context, itemIndex, name);
 }
 
 function normalizeArgumentValue(

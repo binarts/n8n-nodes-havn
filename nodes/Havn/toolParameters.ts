@@ -1,6 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-type FieldKind = 'boolean' | 'dateTime' | 'json' | 'number' | 'string';
+type FieldKind = 'boolean' | 'dateTime' | 'json' | 'number' | 'photos' | 'string';
 
 type ToolField = {
 	description?: string;
@@ -90,8 +90,7 @@ export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
 	] },
 	add_property_photos: { fields: [
 		{ name: 'property_id', required: true, description: 'HAVN property UUID.' },
-		{ name: 'image_urls', required: true, kind: 'json', description: 'JSON array of public image URLs.' },
-		{ name: 'alt_texts', kind: 'json', description: 'Optional JSON array of alt text strings.' },
+		{ name: 'photos', required: true, kind: 'photos', description: 'Public image URLs and optional alt text.' },
 		{ name: 'is_hero_first', kind: 'boolean', description: 'Use the first imported photo as the hero image.' },
 	] },
 	add_attachment: { fields: [
@@ -197,6 +196,38 @@ function propertyForField(tool: string, field: ToolField): INodeProperties {
 	if (field.kind === 'number') return { ...base, type: 'number', default: 0 };
 	if (field.kind === 'dateTime') return { ...base, type: 'dateTime', default: '' };
 	if (field.kind === 'json') return { ...base, type: 'json', default: field.required ? '[]' : '{}' };
+	if (field.kind === 'photos') {
+		return {
+			...base,
+			type: 'fixedCollection',
+			typeOptions: { multipleValues: true },
+			placeholder: 'Add Photo',
+			default: { photo: [{ image_url: '', alt_text: '' }] },
+			options: [
+				{
+					name: 'photo',
+					displayName: 'Photo',
+					values: [
+						{
+							displayName: 'Image URL',
+							name: 'image_url',
+							type: 'string',
+							default: '',
+							required: true,
+							description: 'A publicly accessible direct image URL.',
+						},
+						{
+							displayName: 'Alt Text',
+							name: 'alt_text',
+							type: 'string',
+							default: '',
+							description: 'A short accessible description of this photo.',
+						},
+					],
+				},
+			],
+		};
+	}
 	return { ...base, type: 'string', default: '' };
 }
 
