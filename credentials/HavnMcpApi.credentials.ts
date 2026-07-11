@@ -1,4 +1,4 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
 
 export class HavnMcpApi implements ICredentialType {
 	name = 'havnMcpApi';
@@ -26,4 +26,30 @@ export class HavnMcpApi implements ICredentialType {
 			description: 'The HAVN remote MCP endpoint.',
 		},
 	];
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: '={{$credentials.endpoint}}',
+			url: '',
+			method: 'POST',
+			headers: {
+				Accept: 'application/json, text/event-stream',
+				Authorization: '=Bearer {{$credentials.apiKey}}',
+				'Content-Type': 'application/json',
+			},
+			body: {
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'initialize',
+				params: {
+					protocolVersion: '2025-03-26',
+					capabilities: {},
+					clientInfo: {
+						name: 'n8n-credential-test',
+						version: '1.0.0',
+					},
+				},
+			},
+		},
+	};
 }
