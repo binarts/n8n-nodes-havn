@@ -1,6 +1,6 @@
 {
   "name": "@binartscom/n8n-nodes-havn",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Use HAVN real-estate workspace tools in n8n workflows.",
   "author": {
     "name": "Lubomir Havran",
@@ -51,6 +51,6 @@
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "n8n-workflow": ">=1.0.0"
+    "n8n-workflow": "*"
   }
 }
