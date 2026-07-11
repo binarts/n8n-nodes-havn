@@ -174,7 +174,7 @@ export class Havn implements INodeType {
 					output.push({ json: { error: errorMessage(error) }, pairedItem: { item: itemIndex } });
 					continue;
 				}
-				throw error;
+				throw new NodeOperationError(this.getNode(), errorMessage(error), { itemIndex });
 			}
 		}
 
