@@ -1,6 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-type FieldKind = 'binaryPhotos' | 'boolean' | 'dateTime' | 'number' | 'photos' | 'string' | 'stringList';
+type FieldKind = 'binaryPhotos' | 'boolean' | 'dateTime' | 'number' | 'photos' | 'sourceCounts' | 'string' | 'stringList';
 
 type ToolField = {
 	description?: string;
@@ -63,6 +63,8 @@ const sellerAiFields: ToolField[] = [
 	{ name: 'ai_summary_lead_quality', description: 'Summary of lead quality.' },
 	{ name: 'ai_summary_open_house_activity', description: 'Summary of open house activity.' },
 	{ name: 'ai_summary_pricing_notes', description: 'Pricing observations.' },
+	{ name: 'ai_summary_property_inquiries', kind: 'number', description: 'Direct inquiries about this property.' },
+	{ name: 'ai_summary_lead_sources', kind: 'sourceCounts', description: 'Lead sources and the number of leads from each source.' },
 	{ name: 'ai_summary_buyer_feedback', kind: 'stringList', description: 'One buyer feedback item per line.' },
 	{ name: 'ai_summary_highlights', kind: 'stringList', description: 'One highlight per line.' },
 	{ name: 'ai_summary_next_steps', kind: 'stringList', description: 'One next step per line.' },
@@ -135,13 +137,22 @@ export const TOOL_PARAMETERS: Record<string, ToolParameterDefinition> = {
 		{ name: 'temperature', options: ['hot', 'warm', 'cold'] },
 	] },
 	create_inquiry: { fields: [
-		{ name: 'contact_id', required: true }, { name: 'property_id', required: true },
+		{ name: 'contact_id', required: true },
+		{ name: 'property_id', description: 'Optional HAVN property UUID. Leave empty for a general inquiry.' },
+		{ name: 'desired_location', description: 'Required when no property is selected.' },
+		{ name: 'location_radius_km', kind: 'number' },
+		{ name: 'budget_min', kind: 'number' }, { name: 'budget_max', kind: 'number' },
+		{ name: 'desired_property_type' }, { name: 'purchase_timeline' },
 		{ name: 'intent_score', kind: 'number' }, { name: 'notes' },
 		{ name: 'status', options: ['new', 'qualified', 'follow_up', 'converted', 'archived'] },
 		{ name: 'temperature', options: ['hot', 'warm', 'cold'] },
 	] },
 	update_inquiry: { fields: [
 		{ name: 'inquiry_id', required: true }, { name: 'contact_id' },
+		{ name: 'property_id', description: 'Set a matched property, or leave empty only for a general inquiry with desired location.' },
+		{ name: 'desired_location' }, { name: 'location_radius_km', kind: 'number' },
+		{ name: 'budget_min', kind: 'number' }, { name: 'budget_max', kind: 'number' },
+		{ name: 'desired_property_type' }, { name: 'purchase_timeline' },
 		{ name: 'intent_score', kind: 'number' }, { name: 'notes' },
 		{ name: 'status', options: ['new', 'qualified', 'follow_up', 'converted', 'archived'] },
 		{ name: 'temperature', options: ['hot', 'warm', 'cold'] },
@@ -255,6 +266,23 @@ function propertyForField(tool: string, field: ToolField): INodeProperties {
 					],
 				},
 			],
+		};
+	}
+	if (field.kind === 'sourceCounts') {
+		return {
+			...base,
+			type: 'fixedCollection',
+			typeOptions: { multipleValues: true },
+			placeholder: 'Add Lead Source',
+			default: { source: [{ name: '', count: 0 }] },
+			options: [{
+				name: 'source',
+				displayName: 'Lead Source',
+				values: [
+					{ displayName: 'Source', name: 'name', type: 'string', default: '', required: true },
+					{ displayName: 'Lead Count', name: 'count', type: 'number', default: 0, required: true },
+				],
+			}],
 		};
 	}
 	if (field.kind === 'binaryPhotos') {

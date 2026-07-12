@@ -53,6 +53,18 @@ describe('HAVN n8n tool catalog', () => {
 		expect(TOOL_PARAMETERS.create_contact.fields).toContainEqual(
 			expect.objectContaining({ name: 'full_name', required: true }),
 		);
+		expect(TOOL_PARAMETERS.create_inquiry.fields).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ name: 'contact_id', required: true }),
+				expect.objectContaining({ name: 'property_id' }),
+				expect.objectContaining({ name: 'desired_location' }),
+				expect.objectContaining({ name: 'budget_min', kind: 'number' }),
+				expect.objectContaining({ name: 'desired_property_type' }),
+			]),
+		);
+		expect(TOOL_PARAMETERS.draft_seller_report_summary.fields).toContainEqual(
+			expect.objectContaining({ name: 'ai_summary_lead_sources', kind: 'sourceCounts' }),
+		);
 		expect(TOOL_PARAMETERS.add_property_photos.fields).toContainEqual(
 			expect.objectContaining({ name: 'photos', kind: 'photos', required: true }),
 		);

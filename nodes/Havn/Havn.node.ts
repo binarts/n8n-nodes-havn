@@ -34,9 +34,9 @@ export const HAVN_MCP_TOOLS = [
 	{ name: 'search_contacts', description: 'Search contacts by name, email, or phone.' },
 	{ name: 'search_tasks', description: 'Search HAVN tasks.' },
 	{ name: 'search_open_houses', description: 'Search open houses and showings.' },
-	{ name: 'search_leads', description: 'Search leads and property inquiries.' },
+	{ name: 'search_leads', description: 'Search leads, general inquiries, property inquiries, and buyer requirements.' },
 	{ name: 'search_seller_reports', description: 'Search seller reports.' },
-	{ name: 'analytics_summary', description: 'Get HAVN analytics summaries.' },
+	{ name: 'analytics_summary', description: 'Get HAVN analytics, inquiry mix, lead sources, and buyer requirements.' },
 	{ name: 'search_files', description: 'Search documents and attachments.' },
 	{ name: 'search_media', description: 'Search property and contact media.' },
 	{ name: 'create_task', description: 'Create a task.' },
@@ -48,8 +48,8 @@ export const HAVN_MCP_TOOLS = [
 	{ name: 'create_open_house', description: 'Create an open house.' },
 	{ name: 'update_open_house', description: 'Update an open house.' },
 	{ name: 'add_open_house_lead', description: 'Add a lead to an open house.' },
-	{ name: 'create_inquiry', description: 'Create a property inquiry.' },
-	{ name: 'update_inquiry', description: 'Update a property inquiry.' },
+	{ name: 'create_inquiry', description: 'Create a general or property inquiry.' },
+	{ name: 'update_inquiry', description: 'Update a general or property inquiry and buyer requirements.' },
 	{ name: 'create_contact', description: 'Create a contact.' },
 	{ name: 'update_contact', description: 'Update a contact.' },
 	{ name: 'add_contact_photo', description: 'Import a contact photo from a public URL.' },
@@ -366,6 +366,19 @@ function addArgumentValue(
 	}
 	if (kind === 'binaryPhotos') {
 		result.binary_photos = value;
+		return;
+	}
+	if (kind === 'sourceCounts') {
+		const rows = (value as { source?: Array<{ count?: number; name?: string }> }).source ?? [];
+		const counts: Record<string, number> = {};
+		for (const row of rows) {
+			const source = String(row.name ?? '').trim();
+			if (source) counts[source] = Math.max(0, Number(row.count ?? 0));
+		}
+		const key = name.replace(/^ai_summary_/, '');
+		const aiSummary = (result.ai_summary_json ?? {}) as Record<string, unknown>;
+		aiSummary[key] = counts;
+		result.ai_summary_json = aiSummary;
 		return;
 	}
 	if (name.startsWith('ai_summary_')) {
