@@ -209,11 +209,21 @@ function label(name: string): string {
 		.join(' ');
 }
 
+function sentenceDescription(name: string): string {
+	const words = label(name).split(' ');
+	return words
+		.map((word, index) => {
+			if (index === 0 || ['AI', 'ID', 'URL', 'UUID', 'HAVN', 'MCP'].includes(word)) return word;
+			return word.toLowerCase();
+		})
+		.join(' ');
+}
+
 function propertyForField(tool: string, field: ToolField): INodeProperties {
 	const base = {
 		displayName: label(field.name),
 		name: parameterName(tool, field.name),
-		description: field.description ?? label(field.name),
+		description: field.description ?? sentenceDescription(field.name),
 		displayOptions: {
 			show: {
 				tool: [tool],

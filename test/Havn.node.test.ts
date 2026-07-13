@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { HAVN_MCP_TOOLS } from '../nodes/Havn/Havn.node.js';
-import { TOOL_PARAMETERS } from '../nodes/Havn/toolParameters.js';
+import { Havn, HAVN_MCP_TOOLS } from '../nodes/Havn/Havn.node.js';
+import { parameterName, TOOL_PARAMETERS } from '../nodes/Havn/toolParameters.js';
 
 const EXPECTED_TOOL_NAMES = [
 	'workspace_summary',
@@ -82,5 +82,21 @@ describe('HAVN n8n tool catalog', () => {
 				expect.objectContaining({ name: 'source', required: true }),
 			);
 		}
+	});
+
+	it('uses title case tool names and sentence case generated descriptions', () => {
+		const properties = new Havn().description.properties;
+		const toolProperty = properties.find(({ name }) => name === 'tool');
+		const options = toolProperty?.options ?? [];
+
+		expect(options).toEqual(expect.arrayContaining([
+			expect.objectContaining({ name: 'Workspace Summary', value: 'workspace_summary' }),
+			expect.objectContaining({ name: 'Custom MCP Tool', value: 'custom' }),
+		]));
+
+		const addressLine = properties.find(
+			({ name }) => name === parameterName('create_property', 'address_line_1'),
+		);
+		expect(addressLine?.description).toBe('Address line 1');
 	});
 });

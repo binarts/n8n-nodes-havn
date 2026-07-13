@@ -1,10 +1,12 @@
 import {
 	NodeConnectionTypes,
+	NodeApiError,
 	NodeOperationError,
 	type IExecuteFunctions,
 	type INodeExecutionData,
 	type INodeType,
 	type INodeTypeDescription,
+	type JsonObject,
 } from 'n8n-workflow';
 
 import {
@@ -88,12 +90,15 @@ export class Havn implements INodeType {
 				type: 'options',
 				options: [
 					...HAVN_MCP_TOOLS.map((tool) => ({
-						name: tool.name.replaceAll('_', ' '),
+						name: tool.name
+							.split('_')
+							.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+							.join(' '),
 						value: tool.name,
 						description: tool.description,
 					})),
 					{
-						name: 'Custom MCP tool',
+						name: 'Custom MCP Tool',
 						value: 'custom',
 						description: 'Call a newly released HAVN MCP tool before this package is updated.',
 					},
@@ -187,7 +192,8 @@ export class Havn implements INodeType {
 					output.push({ json: { error: errorMessage(error) }, pairedItem: { item: itemIndex } });
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), errorMessage(error), { itemIndex });
+				if (error instanceof NodeOperationError) throw error;
+				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
 			}
 		}
 

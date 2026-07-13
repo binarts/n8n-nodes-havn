@@ -14,7 +14,16 @@ The node connects to `https://mcp.havnre.app/mcp` by default. The key is stored 
 2. Fill in the named required inputs and choose optional inputs under **Additional Fields**.
 3. The node outputs the tool result as standard n8n JSON.
 
-For example, `get_property_media` displays **Property ID** as a required input and **Limit** as an optional input. The **Custom MCP tool** option keeps a raw JSON field for newly released tools that are not yet included in the package.
+For example, choose **Get Property Media**, set **Property ID** to `2622add8-df69-4339-9eb7-b8db40f50c8c`, and optionally set **Limit** to `10`. A successful item has this shape:
+
+```json
+{
+  "tool": "get_property_media",
+  "data": [{ "id": "photo-id", "property_id": "2622add8-df69-4339-9eb7-b8db40f50c8c", "url": "https://..." }]
+}
+```
+
+Use **Custom MCP Tool** only when HAVN has released a new MCP tool that is not yet listed in this node version. Enter its exact MCP tool name and arguments as a JSON object; for normal workflows, prefer the named tools and their guided fields.
 
 ## Development
 
